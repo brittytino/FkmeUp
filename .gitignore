@@ -61,7 +61,6 @@ app.*.map.json
 
 # Environment and secrets
 .env
-assets/env/.env
 android/key.properties
 android/*.jks
 android/*.keystore
