@@ -36,7 +36,7 @@ jobs:
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/upload-keystore.jks
           cat > android/key.properties <<EOF
-          storeFile=upload-keystore.jks
+          storeFile=../upload-keystore.jks
           storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
           keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
