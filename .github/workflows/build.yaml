@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-android-apk:
@@ -140,3 +140,81 @@ jobs:
           name: macos-release-app
           path: build/macos/Build/Products/Release/*.app
           if-no-files-found: error
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-android-apk, build-web, build-desktop]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate version tag
+        id: version
+        run: |
+          VERSION="v1.0.0-$(date +'%Y%m%d-%H%M%S')"
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Linux archive
+        run: |
+          cd artifacts/linux-release-bundle
+          zip -r ../../fkmeup-linux-x64.zip .
+          cd ../..
+
+      - name: Create Windows archive
+        run: |
+          cd artifacts/windows-release-bundle
+          zip -r ../../fkmeup-windows-x64.zip .
+          cd ../..
+
+      - name: Rename APK
+        run: |
+          cp artifacts/app-release-apk/app-release.apk fkmeup-android.apk
+
+      - name: Create web archive
+        run: |
+          cd artifacts/web-release
+          zip -r ../../fkmeup-web.zip .
+          cd ../..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body: |
+            ## FkmeUp Release ${{ steps.version.outputs.tag }}
+            
+            **Built from commit:** ${{ github.sha }}
+            
+            ### Downloads
+            - **Android APK:** fkmeup-android.apk (signed)
+            - **Windows:** fkmeup-windows-x64.zip
+            - **Linux:** fkmeup-linux-x64.zip
+            - **macOS:** FkmeUp.app.zip
+            - **Web:** fkmeup-web.zip
+            
+            ### Installation
+            - **Android:** Install the APK on your device
+            - **Windows:** Extract the zip and run the .exe
+            - **Linux:** Extract the zip and run the binary
+            - **macOS:** Extract and move the .app to Applications
+            - **Web:** Extract and serve with any web server
+          draft: false
+          prerelease: false
+          files: |
+            fkmeup-android.apk
+            fkmeup-windows-x64.zip
+            fkmeup-linux-x64.zip
+            fkmeup-web.zip
+            artifacts/macos-release-app/*.app
